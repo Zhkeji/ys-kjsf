@@ -1,0 +1,34 @@
+# 依赖
+node_modules/
+*/node_modules/
+
+# 构建产物（保留前端 dist 用于生产部署，按需取消注释）
+# frontend/dist/
+
+# 数据库文件（含本地数据，不入库）
+*.db
+*.db-shm
+*.db-wal
+backend/ysforum.db
+backend/ysforum.db-shm
+backend/ysforum.db-wal
+
+# 上传文件
+backend/uploads/
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+
+# 日志
+*.log
+logs/
+
+# 编辑器/系统
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 锁文件保留（package-lock.json 入库以保证部署一致性）
