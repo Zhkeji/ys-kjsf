@@ -2,33 +2,30 @@
 node_modules/
 */node_modules/
 
-# 构建产物（保留前端 dist 用于生产部署，按需取消注释）
-# frontend/dist/
-
-# 数据库文件（含本地数据，不入库）
-*.db
-*.db-shm
-*.db-wal
-backend/ysforum.db
-backend/ysforum.db-shm
-backend/ysforum.db-wal
-
-# 上传文件
+# 构建产物
+frontend/dist/
 backend/uploads/
 
-# 环境变量与密钥
+# 数据库
+*.db
+*.db-wal
+*.db-shm
+
+# 环境变量
 .env
-.env.*
-!.env.example
+.env.local
 
 # 日志
 *.log
-logs/
+npm-debug.log*
 
-# 编辑器/系统
-.DS_Store
-Thumbs.db
+# 编辑器
 .vscode/
 .idea/
+*.swp
+.DS_Store
 
-# 锁文件保留（package-lock.json 入库以保证部署一致性）
+# 部署
+Dockerfile
+fly.toml
+DEPLOY*.md

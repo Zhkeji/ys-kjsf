@@ -1,13 +1,9 @@
 import Database from 'better-sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// 支持通过环境变量指定数据目录（用于持久卷部署，如 Fly.io）
-const dataDir = process.env.DATA_DIR || __dirname;
-if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
-const dbPath = join(dataDir, 'ysforum.db');
+const dbPath = join(__dirname, 'ysforum.db');
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
