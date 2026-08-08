@@ -1,0 +1,26 @@
+# YS 论坛系统 — Fly.io 配置
+# 部署命令: fly deploy
+# 首次需先创建持久卷: fly volumes create ys_data --size 1
+
+app = "ys-kjsf"
+primary_region = "hkg"  # 香港区域，国内访问较快；可改为 nrt(东京)/sin(新加坡)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false  # 不自动停机，保持常驻（Socket.io 长连接需要）
+  auto_start_machines = true
+  min_machines_running = 1    # 至少保持1台运行，避免冷启动
+
+# 持久卷：SQLite 数据库 + 上传文件
+[[mounts]]
+  source = "ys_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "256_mb"
+  cpu_kind = "shared"
+  cpus = 1

@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 import { authRequired } from '../middleware/auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const uploadDir = join(__dirname, 'uploads');
+// 上传目录支持环境变量（部署到持久卷）
+const uploadDir = process.env.DATA_DIR ? join(process.env.DATA_DIR, 'uploads') : join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
