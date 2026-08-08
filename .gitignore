@@ -15,6 +15,9 @@ backend/uploads/
 .env
 .env.local
 
+# cloudflared 二进制
+.cloudflared/
+
 # 日志
 *.log
 npm-debug.log*
@@ -24,8 +27,3 @@ npm-debug.log*
 .idea/
 *.swp
 .DS_Store
-
-# 部署
-Dockerfile
-fly.toml
-DEPLOY*.md
