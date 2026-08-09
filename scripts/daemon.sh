@@ -6,7 +6,12 @@
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PID_DIR="$ROOT/.pids"
-mkdir -p "$PID_DIR"
+LOG_DIR="$ROOT/.logs"
+mkdir -p "$PID_DIR" "$LOG_DIR"
+
+# 守护参数
+MAX_RESTART_PER_5MIN=8     # 5 分钟内重启超过此数则放弃
+MONITOR_INTERVAL=30        # 正常监控轮询间隔（秒）
 
 echo "=========================================="
 echo "  YS 论坛系统 — 守护模式"
@@ -19,19 +24,33 @@ if command -v termux-wake-lock >/dev/null 2>&1; then
   echo "✓ 已获取唤醒锁（屏幕关闭后仍运行）"
 fi
 
-# 2. 停止旧实例
+# 2. 退出时清理
+cleanup() {
+  echo ""
+  echo "[$(date '+%H:%M:%S')] 收到退出信号，停止服务并释放唤醒锁..."
+  bash "$ROOT/scripts/stop.sh" >/dev/null 2>&1 || true
+  if command -v termux-wake-unlock >/dev/null 2>&1; then
+    termux-wake-unlock 2>/dev/null || true
+  fi
+  echo "✓ 守护已停止"
+  exit 0
+}
+trap cleanup INT TERM
+
+# 3. 停止旧实例
+echo "[$(date '+%H:%M:%S')] 停止旧实例..."
 bash "$ROOT/scripts/stop.sh" >/dev/null 2>&1 || true
 sleep 1
 
-# 3. 守护循环
-echo "启动守护进程..."
-RESTART_COUNT=0
+# 4. 守护循环
+echo "[$(date '+%H:%M:%S')] 启动守护进程（Ctrl+C 退出）..."
+RESTART_TIMES=()   # 最近重启时间戳数组
 
 while true; do
-  # 启动服务
+  # 启动服务（start.sh 内部会处理"已在运行"检查）
   echo ""
   echo "[$(date '+%H:%M:%S')] 启动服务..."
-  bash "$ROOT/scripts/start.sh" --no-daemon 2>&1 | tail -15
+  bash "$ROOT/scripts/start.sh" 2>&1 | tail -20
 
   # 检查后端是否存活
   SERVER_PID=""
@@ -40,17 +59,36 @@ while true; do
   fi
 
   if [ -z "$SERVER_PID" ] || ! kill -0 "$SERVER_PID" 2>/dev/null; then
-    RESTART_COUNT=$((RESTART_COUNT + 1))
-    echo ""
-    echo "[$(date '+%H:%M:%S')] ⚠ 服务退出，第 $RESTART_COUNT 次，5秒后自动重启..."
-    echo "  （按 Ctrl+C 停止守护）"
-    sleep 5
-  else
-    # 服务正常运行，监控
-    echo "[$(date '+%H:%M:%S')] 服务运行中，持续监控..."
-    while kill -0 "$SERVER_PID" 2>/dev/null; do
-      sleep 30
+    # 服务未起来，记录重启时间
+    NOW=$(date +%s)
+    RESTART_TIMES+=($NOW)
+    # 清理 5 分钟前的记录
+    CUTOFF=$((NOW - 300))
+    FILTERED=()
+    for T in "${RESTART_TIMES[@]}"; do
+      [ "$T" -ge "$CUTOFF" ] && FILTERED+=($T)
     done
-    echo "[$(date '+%H:%M:%S')] ⚠ 后端进程消失，重启..."
+    RESTART_TIMES=("${FILTERED[@]}")
+
+    COUNT=${#RESTART_TIMES[@]}
+    if [ $COUNT -ge $MAX_RESTART_PER_5MIN ]; then
+      echo ""
+      echo "[$(date '+%H:%M:%S')] ✗ 5分钟内重启 $COUNT 次，可能存在严重问题"
+      echo "  查看日志: bash scripts/logs.sh"
+      echo "  放弃守护，避免无限重启"
+      cleanup
+    fi
+
+    echo ""
+    echo "[$(date '+%H:%M:%S')] ⚠ 服务退出（5分钟内第 $COUNT 次），10秒后重启..."
+    sleep 10
+    continue
   fi
+
+  # 服务正常运行，进入监控
+  echo "[$(date '+%H:%M:%S')] 服务运行中 (PID $SERVER_PID)，持续监控..."
+  while kill -0 "$SERVER_PID" 2>/dev/null; do
+    sleep $MONITOR_INTERVAL
+  done
+  echo "[$(date '+%H:%M:%S')] ⚠ 后端进程消失，准备重启..."
 done
