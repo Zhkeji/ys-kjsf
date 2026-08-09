@@ -18,6 +18,10 @@ backend/uploads/
 # cloudflared 二进制
 .cloudflared/
 
+# 运行时日志和PID
+.logs/
+.pids/
+
 # 日志
 *.log
 npm-debug.log*
